@@ -150,6 +150,9 @@ Screenshots taken on the live link:
 ![Join screen](screenshots/01-join.png)
 *Join screen: name and room code, with the optional password link.*
 
+![Chat between two devices](screenshots/02-chat.png)
+*Chat messages arriving on both devices.*
+
 ![Password field](screenshots/05-password.png)
 *Optional room password field opened on the join screen.*
 
@@ -157,7 +160,10 @@ Screenshots taken on the live link:
 *Two people online (connected as slot 2), join notices in the chat, and the shared notes pad showing the last editor.*
 
 ![Shared notes edited by two people at once](screenshots/03b-notes-two-people.png)
-*Two people typing in the notes at the same moment. This is the last-writer-wins limitation described below.*
+*Two people typing in the notes at the same moment. This is the last-writer-wins limitation described under Limitations.*
+
+![File transfer](screenshots/04-files.png)
+*A shared file card with a Get button and progress bar.*
 
 ## Team contributions
 | Member | Area | What they built |
