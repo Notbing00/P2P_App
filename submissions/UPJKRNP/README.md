@@ -35,6 +35,30 @@ All user data travels browser-to-browser over WebRTC data channels. There is no 
 - **Notes.** Last-writer-wins on the whole document, using a Lamport clock with slot ID as tie-break. Remote updates keep your caret in place. Newcomers receive the current notes on join.
 - **Files.** Only metadata is broadcast. The owner streams the file in 16 KB chunks on request, with back-pressure on the data channel, and the receiver reassembles it into a downloadable Blob. The owner must stay online.
 
+## P2P mesh (Vipransh Sharma)
+This is the part that lets browsers find and talk to each other without any backend of our own. Everything else (chat, notes, files, UI) sits on top of the connections built here.
+
+**1. Finding each other with no server.** WebRTC needs some way to exchange connection details, so we use the free PeerJS Cloud broker for signalling only. Each browser tries to register the peer ID `studyroom-<room>-<n>`, starting at `n = 0`. If the broker answers `unavailable-id`, that slot is taken, so the app destroys that attempt and tries `n + 1`, up to slot 9. The first free slot becomes that person's identity in the room.
+
+**2. Building a full mesh.** Once a peer owns a slot, it dials every other slot (0 to 9). Empty slots fail with `peer-unavailable`, which is expected and ignored. The result is that every person is directly connected to every other person, with no host in the middle. If anyone leaves, the rest of the room carries on.
+
+```
+slot 0 ─── slot 1
+  │  ╲   ╱  │       every pair has its own WebRTC data channel;
+  │   ╲ ╱   │       the broker is used only to set them up
+slot 2 ─── slot 3
+```
+
+**3. Connecting across different networks.** The ICE configuration uses two public STUN servers (Google, Twilio) and the Open Relay TURN service (including TURN over TCP/443) as a fallback for strict campus or office Wi-Fi. If nobody connects within 20 seconds, the chat suggests checking the room code and password or trying a phone hotspot.
+
+**4. One link per pair of people.** Because nobody coordinates, two people joining at the same moment can dial each other. Each connection remembers which slot dialled it, and both sides keep the link dialled by the lower slot and close the other. See problem 4 below.
+
+**5. Bringing newcomers up to date.** When a link opens, each side sends a `hello` message with its name, chat history, notes and file catalogue, and the other side merges it. Join and leave notices come from this layer when a link opens or closes.
+
+**6. Room isolation.** The optional password is stretched with PBKDF2 and becomes part of the peer IDs, so people with a different code or password land in a different room namespace. See problem 6 below.
+
+Limits of this design: at most 10 people per room, and it depends on the free public broker, STUN and TURN services being available.
+
 ## Technical challenges in the design
 These are the design-level challenges we had to solve (lettered so they are not confused with the numbered problems in the next section).
 - **A. NAT traversal between different networks:** STUN plus TURN fallback (including TURN over TCP/443).
@@ -80,6 +104,7 @@ Problem 8 (fake identities) is **not** solved: anyone can type any name, and we 
 - **Final solution:** Every incoming message goes through a `clean...` function that checks types and limits (chat 2,000 characters, notes 200,000, file names 255, at most 500 history items and 100 files in a `hello`). File chunks are accepted only from the file's owner, and their size and index are checked. Anything that fails is silently dropped.
 
 ### 4. Two peers opened a connection to each other at the same time
+*Area: P2P mesh (Vipransh Sharma)*
 - **Problem:** Two people could end up connected twice, once in each direction.
 - **Why it happened:** With no host, every peer dials every other slot as soon as it joins. When two peers join at nearly the same moment, each dials the other.
 - **What we tried:** Our first attempt was to keep whichever connection opened first and close the later one. That rule cannot work on its own, because the two sides may see the two links open in a different order and each close a different one, leaving no connection at all.
@@ -92,6 +117,7 @@ Problem 8 (fake identities) is **not** solved: anyone can type any name, and we 
 - **Final solution:** We compare the old and new text to find the part that changed, then shift the caret by the length difference when the change is before it. The caret stays where the person was typing.
 
 ### 6. A wrong password gave no error and just showed an empty room
+*Area: P2P mesh (Vipransh Sharma)*
 - **Problem:** Someone who typed the wrong password saw a normal-looking room with nobody in it.
 - **Why it happened:** The password is hashed into the peer IDs, so a different password means a different room namespace. There is no server to check the password and reject it.
 - **What we tried:** We could not show an "incorrect password" message, because the app cannot tell the difference between an empty room and a wrong password.
@@ -134,9 +160,11 @@ Screenshots taken on the live link:
 *Two people typing in the notes at the same moment. This is the last-writer-wins limitation described below.*
 
 ## Team contributions
-| Member | Commits / area |
-|---|---|
-| Yuvraj Dhiman | UI and styling |
-| Pankaj Singh | Shared notes |
-| Arnav Verma | File transfer |
-| Vipransh Sharma | P2P mesh |
+| Member | Area | What they built |
+|---|---|---|
+| Yuvraj Dhiman (590025374) | UI and styling | Responsive layout (tabs on phones), light/dark theme toggle, status indicator, avatar stack of who is online, chat bubbles with unread badge, one-click invite link, file cards with type icons and progress bars. |
+| Pankaj Singh (590028972) | Shared notes | Notes pad synced between peers, Lamport-clock last-writer-wins with slot ID tie-break, caret preservation when remote text arrives, "last edit by" indicator, notes sent to newcomers on join. |
+| Arnav Verma (590027671) | File transfer | File metadata broadcast, 16 KB chunked transfer on request, back-pressure on the data channel, progress bars, streaming to disk for large files (Chrome/Edge), 100 MB cap, owner-only chunk validation. |
+| Vipransh Sharma (590022121) | P2P mesh | Serverless room discovery by slot claiming on the PeerJS broker, full-mesh dialling, STUN plus TURN setup, duplicate-connection tie-break, `hello` state sync for late joiners, join/leave presence, password-derived room IDs, 20-second "nobody connected" hint. See "P2P mesh" above. |
+
+Every member has commits in the Git history of this repository.
