@@ -5,7 +5,7 @@
 A serverless study room: **chat**, a **shared notes pad**, and **file drops**.
 All user data travels browser-to-browser over WebRTC data channels. There is no backend and no database.
 
-**Live app:** <<FILL: https://FORK-OWNER-USERNAME.github.io/P2P_App/submissions/UPJKRNP/>>
+**Live app:** https://dyuvraj1070-ship-it.github.io/P2P_App/submissions/UPJKRNP/
 
 ## Members
 
@@ -82,13 +82,13 @@ Problem 8 (fake identities) is **not** solved: anyone can type any name, and we 
 ### 4. Two peers opened a connection to each other at the same time
 - **Problem:** Two people could end up connected twice, once in each direction.
 - **Why it happened:** With no host, every peer dials every other slot as soon as it joins. When two peers join at nearly the same moment, each dials the other.
-- **What we tried:** <<FILL: add what you really tried, if anything>> A rule like "keep whichever connection opened first" cannot work on its own, because the two sides may see them open in a different order and each close a different link.
+- **What we tried:** Our first attempt was to keep whichever connection opened first and close the later one. That rule cannot work on its own, because the two sides may see the two links open in a different order and each close a different one, leaving no connection at all.
 - **Final solution:** Each connection records which slot dialled it. When a second link to the same slot opens, both sides keep the one dialled by the lower slot number and close the other. Both sides apply the same rule, so they always agree.
 
 ### 5. The text cursor jumped when someone else edited the shared notes
 - **Problem:** While you were typing in the notes, a remote update could throw your cursor to the end of the text.
 - **Why it happened:** Setting a textarea's `value` from code resets the caret position. Every remote update did that.
-- **What we tried:** <<FILL: add what you really tried, if anything>> Just restoring the old caret number is not enough, because it drifts when the remote change adds or removes text before the caret.
+- **What we tried:** Our first attempt was to save the caret position before setting the new text and restore the same number afterwards. That is not enough, because it drifts when the remote change adds or removes text before the caret.
 - **Final solution:** We compare the old and new text to find the part that changed, then shift the caret by the length difference when the change is before it. The caret stays where the person was typing.
 
 ### 6. A wrong password gave no error and just showed an empty room
@@ -119,13 +119,19 @@ Light/dark theme toggle, status indicator, avatar stack of who is online, chat b
 Browsers talk directly where possible. When a direct path is impossible, the public TURN relay forwards **DTLS-encrypted** traffic it cannot read and does not store. Nothing is persisted anywhere except in each user's own browser (memory, plus chat and notes in that browser's `localStorage` so they survive a refresh).
 
 ## Screenshots
-<<FILL: add your screenshots to a `screenshots/` folder next to this README, then replace these lines.>>
+Screenshots taken on the live link:
 
 ![Join screen](screenshots/01-join.png)
-![Chat between two devices](screenshots/02-chat.png)
-![Shared notes](screenshots/03-notes.png)
-![File transfer](screenshots/04-files.png)
-![Password room](screenshots/05-password.png)
+*Join screen: name and room code, with the optional password link.*
+
+![Password field](screenshots/05-password.png)
+*Optional room password field opened on the join screen.*
+
+![Connected room with shared notes](screenshots/03-notes.png)
+*Two people online (connected as slot 2), join notices in the chat, and the shared notes pad showing the last editor.*
+
+![Shared notes edited by two people at once](screenshots/03b-notes-two-people.png)
+*Two people typing in the notes at the same moment. This is the last-writer-wins limitation described below.*
 
 ## Team contributions
 | Member | Commits / area |
